@@ -1,0 +1,79 @@
+//Laura Martin 2023.05.19
+//Run the macro
+//Select the folder containing the subfolders containing the .tif files
+//Run
+//Inside the folder with tif, a new folder will be created for every file, containing:
+//  -.tif of single nuclei
+//  -.zip of ROI 
+
+macro "Save CV single nuclei as .tiff in batch v2.0" { 
+
+                      //select input folder
+        dir0 = getDirectory("Choose an Image Directory"); 
+		setBatchMode( false )
+        list0 = getFileList(dir0); 
+        Array.sort(list0);
+                  for (w=0; w<list0.length; w++) { 
+                       dir1 = dir0+list0[w]; 
+                       showProgress(w, list0.length); 
+                       open(dir1); {
+
+        list = getFileList(dir1); 
+        Array.sort(list);
+
+         for (k=0; k<list.length; k++) { 
+                path = dir1+list[k]; 
+                showProgress(k, list.length); 
+                open(path); {
+
+imageName = getTitle();
+imageFolder = imageName;
+imageFolder = substring(imageFolder,0,lengthOf(imageName)-4);
+File.makeDirectory(dir1+imageFolder);
+results_Dir = dir1+imageFolder;
+
+//run("Brightness/Contrast...");
+run("Enhance Contrast", "saturated=0.35");
+run("Duplicate...", " ");
+run("Gaussian Blur...", "sigma=2");
+setAutoThreshold("Default dark");
+//run("Threshold...");
+//setThreshold(12, 255);
+setOption("BlackBackground", false);
+run("Convert to Mask");
+run("Fill Holes");
+run("Dilate");
+run("Watershed");
+run("Analyze Particles...", "size=50-Infinity exclude add");
+selectWindow(imageName);
+n = roiManager("count");
+for (i = 0; i < n; i++) {
+    roiManager("select", i);
+    title = getTitle;
+    run("Duplicate...", " ");
+    setBackgroundColor(0, 0, 0);
+    run("Clear Outside");
+    roiManager("Show All with labels");
+    roiManager("Show All without labels");
+    roiManager("Show All");
+    roiManager("Show None");
+    saveAs("Tiff", results_Dir+File.separator+imageName+"_"+(i+1));
+    close();
+    
+}
+selectWindow(imageName);
+//run("Brightness/Contrast...");
+run("Enhance Contrast", "saturated=0.35");
+roiManager("Show All with labels");
+roiManager("Save", results_Dir+File.separator+imageName+"_"+"ROI"+".zip");
+
+selectWindow("ROI Manager"); 
+run("Close");
+run("Close All");
+                                                  }
+
+
+}
+}
+}
+}
